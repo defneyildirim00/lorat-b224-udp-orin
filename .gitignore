@@ -1,0 +1,9 @@
+venv/
+third_party/
+weights/
+videos/
+__pycache__/
+*.pyc
+*.engine
+*.onnx
+*.log

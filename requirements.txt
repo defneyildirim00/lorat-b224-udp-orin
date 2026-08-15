@@ -1,0 +1,9 @@
+# venv-yerel bağımlılıklar.
+#
+# torch / torchvision / tensorrt BURADA YOK ve olmamalı: Jetson'da bunlar
+# NVIDIA'nın sistem paketlerinden gelir ve venv --system-site-packages ile
+# oluşturulduğu için zaten görünürler. pip'ten kurmaya çalışmak aarch64'te ya
+# başarısız olur ya da CUDA'sız bir sürüm kurar.
+timm==1.0.28
+safetensors==0.5.3
+gdown==5.2.2
