@@ -52,15 +52,20 @@ fi
 
 if ! ls "$VIDEO_DIR"/*.mp4 >/dev/null 2>&1; then
   say "elde video yok, test klibi üretiliyor (30 fps, 20 sn, hareketli hedef)"
-  # Sentetik ama takip edilebilir: düz zemin üzerinde çapraz giden bir kare.
-  # Gerçek bir kayıt yerine geçmez, hattı uçtan uca denemek içindir.
+  # Hedefin DOKUSU olması şart. İlk denemem düz sarı bir dikdörtgendi ve LoRAT
+  # tutunamadı (conf 0.01, kutu tüm kareye yayıldı) — DINOv2 özniteliklerinin
+  # kenardan başka bakacağı bir şey yoktu. Bu yüzden hedef `testsrc2` (renkli,
+  # yazılı, iç yapısı olan bir desen), zemin de bulanıklaştırılmış renk barları:
+  # ölçüldü, conf 0.95 ve kutu boyutu sabit kalıyor.
+  #
+  # Gerçek bir kayıt yerine geçmez; hattı uçtan uca denemek içindir.
   ffmpeg -hide_banner -loglevel error -y \
-    -f lavfi -i "color=c=0x3a5f3a:s=1280x720:r=30:d=20" \
-    -f lavfi -i "color=c=0xffcc00:s=90x140:d=20" \
-    -filter_complex "[0][1]overlay=x='120+(W-240)*t/20':y='200+120*sin(2*PI*t/7)'" \
+    -f lavfi -i "smptebars=s=1280x720:r=30:d=20" \
+    -f lavfi -i "testsrc2=s=140x110:r=30:d=20" \
+    -filter_complex "[0]boxblur=6[bg];[bg][1]overlay=x='140+(W-280)*t/20':y='240+140*sin(2*PI*t/9)'" \
     -c:v libx264 -preset medium -pix_fmt yuv420p "$VIDEO_DIR/test_target.mp4" \
     || die "test videosu üretilemedi"
-  ok "üretildi: $VIDEO_DIR/test_target.mp4"
+  ok "üretildi: $VIDEO_DIR/test_target.mp4  (ilk karede hedef: 140,240,140,110)"
 fi
 
 echo
