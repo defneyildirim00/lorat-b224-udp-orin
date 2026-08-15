@@ -40,8 +40,8 @@ Model kurulumu ile akış kurulumu **bilerek ayrı**. Biri ağırlık indirir, d
 ffmpeg/port/video hazırlar; birinin bozulması diğerini ilgilendirmez.
 
 ```bash
-git clone https://github.com/defneyildirim00/lorat-b224-udp.git
-cd lorat-b224-udp
+git clone https://github.com/defneyildirim00/lorat-b224-udp-orin.git
+cd lorat-b224-udp-orin
 
 ./setup_model.sh      # ADIM 1: venv + bağımlılıklar + üstkaynak kod + ağırlıklar + duman testi
 ./setup_stream.sh     # ADIM 2: ffmpeg/port doğrulama + test videosu
@@ -197,7 +197,7 @@ işlenmeyen kareler olabilir; oran çıkışta yazar.
 ## 7. Dizin yapısı
 
 ```
-lorat-b224-udp/
+lorat-b224-udp-orin/
 ├── setup_model.sh      # ADIM 1: model
 ├── setup_stream.sh     # ADIM 2: akış
 ├── publish.sh          # terminal 1
