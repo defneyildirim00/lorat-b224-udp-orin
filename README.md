@@ -162,6 +162,12 @@ Ekransız modda kutu fareyle seçilemez, `--bbox x,y,w,h` ile verilir. Gerçek
 serviste bu kutu operatörden ayrı bir UDP kontrol kanalıyla gelir; bu repo o
 kanalı içermez.
 
+> **`--bbox` canlı yayında dikkatli kullan.** Yayına *ortadan* katılırsın: hangi
+> karede başlayacağın belli değildir, dolayısıyla "0. karedeki" bir kutu genelde
+> boş bir yere denk gelir ve tracker anında kaybeder. Sabit kutu ancak hedef
+> büyük ve yavaşsa iş görür. Doğru yol pencereden seçmek; ekransız çalışacaksan
+> kutuyu o anki görüntüye göre belirle.
+
 Kendi IP'ni öğrenmek: `ip -4 addr` (Linux/Mac) ya da `ipconfig` (Windows).
 
 ## 5. Sorun giderme
