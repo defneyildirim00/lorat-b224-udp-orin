@@ -1,7 +1,10 @@
-venv/
-third_party/
-weights/
-videos/
+# Kurulum script'lerinin ürettiği/indirdiği her şey. Bilerek slash YOK:
+# "venv/" sadece dizinle eşleşir, oysa bunlar test sırasında symlink de olabiliyor
+# ve o zaman sessizce commit'e giriyorlar.
+venv
+third_party
+weights
+videos
 __pycache__/
 *.pyc
 *.engine
