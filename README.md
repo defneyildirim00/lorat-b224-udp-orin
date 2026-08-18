@@ -25,7 +25,7 @@ değişen tek şey adresler ([Birden fazla makine](#4-birden-fazla-makine)).
 | python | **3.8** — JetPack 5.1'in TensorRT bağlamaları sadece 3.8 için var |
 | torch | NVIDIA'nın sistem paketi (CUDA'lı). `pip install torch` **yapma**, aarch64'te CUDA'sız sürüm gelir |
 | ffmpeg | libx264 encoder'ıyla: `sudo apt install ffmpeg` |
-| disk | ~1.5 GB (üstkaynak kod + ağırlıklar) |
+| disk | kurulum sırasında geçici ~2.5 GB, kalıcı ~700 MB |
 
 Kontrol:
 
@@ -57,8 +57,9 @@ cd lorat-b224-udp-orin
    * [LoRAT](https://github.com/LitingLin/LoRAT) (ECCV 2024) — `5260744`
 5. Ağırlıkları indirir:
    * DINOv2 ViT-B/14 sırt kemiği (torch hub önbelleğine)
-   * LoRAT B-224 ağırlıkları (Google Drive klasörü; ~360 MB iner, 52 MB'ı
-     kullanılır, gerisi silinir — tekil dosya linki yayınlanmamış)
+   * LoRAT B-224 ağırlıkları (Google Drive klasörü; **~2 GB iner**, 52 MB'ı
+     kullanılır, gerisi hemen silinir — tekil dosya linki yayınlanmamış, klasör
+     de olduğu gibi inmek zorunda)
 6. Duman testi: model kurulur, bir kare işlenir, süre yazdırılır
 
 Tekrar çalıştırmak zararsız — var olanı atlar. Sadece doğrulamak için:

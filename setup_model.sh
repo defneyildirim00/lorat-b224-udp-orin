@@ -88,13 +88,14 @@ fetch https://dl.fbaipublicfiles.com/dinov2/dinov2_vitb14/dinov2_vitb14_pretrain
       "$HUB/dinov2_vitb14_pretrain.pth"
 
 # LoRAT'ın yayınlanmış ağırlıkları Google Drive klasöründe duruyor. gdown klasörü
-# olduğu gibi indirir (dört varyant, ~360 MB) — bize sadece base.bin (52 MB)
-# lazım, gerisi silinir. Tekil dosya ID'si yayınlanmadığı için tek dosya
-# indirmenin güvenilir bir yolu yok.
+# olduğu gibi indirir — bize sadece base.bin (52 MB) lazım, gerisi hemen silinir.
 LORAT_DRIVE_FOLDER="https://drive.google.com/drive/folders/1FvViP0MCSiAu2FSrNjg7XEORn74yOBdD"
 if [ ! -s "$WEIGHTS/lorat/base.bin" ]; then
   [ "$CHECK_ONLY" = 1 ] && die "weights/lorat/base.bin eksik"
-  say "LoRAT ağırlıkları indiriliyor (Google Drive klasörü, ~360 MB)"
+  # Klasörde bugün on iki dosya var (GOT10k varyantları da eklenmiş): ~2 GB iner,
+  # 52 MB'ı kalır. Tekil dosya ID'si yayınlanmadığı için tek dosya indirmenin
+  # güvenilir bir yolu yok.
+  say "LoRAT ağırlıkları indiriliyor (Google Drive klasörü, ~2 GB iner, 52 MB kalır)"
   "$VENV/bin/gdown" --folder "$LORAT_DRIVE_FOLDER" -O "$WEIGHTS/lorat" --remaining-ok \
     || die "gdown başarısız. Elle indir: $LORAT_DRIVE_FOLDER -> $WEIGHTS/lorat/base.bin"
   # gdown klasörü bir alt dizine açabilir; base.bin'i yukarı taşı.
@@ -103,8 +104,11 @@ if [ ! -s "$WEIGHTS/lorat/base.bin" ]; then
     [ -n "$found" ] && mv "$found" "$WEIGHTS/lorat/base.bin"
   fi
   [ -s "$WEIGHTS/lorat/base.bin" ] || die "base.bin bulunamadı; elle indir: $LORAT_DRIVE_FOLDER"
-  # yer açmak için ihtiyacımız olmayan varyantlar
-  rm -f "$WEIGHTS/lorat/base-378.bin" "$WEIGHTS/lorat/large.bin" "$WEIGHTS/lorat/large-378.bin"
+  # base.bin dışında NE VARSA sil. İsim isim silmek yetmiyordu: Drive klasörüne
+  # sonradan giant varyantları ve bir GOT10k/ alt dizini eklenmiş, ikisi de
+  # listede yoktu ve 1.5 GB diskte kalıyordu. -delete derinlik önceliklidir,
+  # yani alt dizinler de temizlenir.
+  find "$WEIGHTS/lorat" -mindepth 1 -not -name base.bin -delete 2>/dev/null || true
 fi
 # Beklenen boyut ~52 MB. Çok küçükse gdown büyük ihtimalle bir HTML onay
 # sayfasını kaydetmiştir (Drive'ın virüs taraması uyarısı) — sessizce bozuk bir
