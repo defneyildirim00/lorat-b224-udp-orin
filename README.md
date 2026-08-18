@@ -13,7 +13,7 @@ kutulu görüntü tekrar UDP'ye basılır; istersen başka bir makineden izlersi
 ```
 
 Üçü de ayrı süreç ve **ayrı makinede olabilir**. Hepsi tek Orin'de de çalışır;
-değişen tek şey adresler ([Birden fazla makine](#birden-fazla-makine)).
+değişen tek şey adresler ([Birden fazla makine](#4-birden-fazla-makine)).
 
 ---
 
@@ -88,7 +88,32 @@ gelmeden açılırsa bekler, ölmez.
 **Kapatırken** ters sırada: izleyici `q`, tracker `q`, yayıncı `Ctrl-C`.
 Yayıncıyı unutursan port dolu kalır; `pkill -x ffmpeg`.
 
-### Hedefi seçmek
+### Terminal 1 — hangi video yayınlanıyor
+
+Video **sadece burada** seçilir. Tracker ile izleyici videoyu hiç bilmez; onlar
+UDP'den ne gelirse onu alır (uçakta bu bacak zaten kameradır).
+
+| komut | ne yapar |
+|---|---|
+| `./publish.sh` | `videos/` içindeki **ilk** mp4 (alfabetik) |
+| `./publish.sh test_target.mp4` | `videos/` içinden isimle seç |
+| `./publish.sh /yol/kendi_video.mp4` | klasör dışından, tam yol |
+| `./publish.sh video.mp4 10.0.0.7:1234` | tracker başka makinedeyse onun adresi |
+
+`videos/` içinde birden fazla mp4 varsa argümansız hal alfabetik ilkini alır ve bu
+istediğin olmayabilir — ismi açıkça yaz. Klasörü `./setup_stream.sh` doldurur:
+argümansız çalıştırırsan test klibi üretir, `./setup_stream.sh /yol/video.mp4`
+dersen kendi videonu kopyalar (bu durumda test klibi üretilmez).
+
+Yayın varsayılan olarak **döngüdedir**, klip bitince başa sarar:
+
+```bash
+LOOP=0 ./publish.sh              # bir kez oynat, bitince dur
+FPS=25 ./publish.sh video.mp4    # kare hızını değiştir (tracker da aynı FPS'i kullanır)
+```
+
+
+### Terminal 2 — hedefi seçmek
 
 Model ~10-15 saniye yüklenir. **Yükleme bitene kadar bekle** — üstteki
 `loading ...` yazısı kaybolup `no target - drag a box, or click its two corners`
@@ -129,6 +154,43 @@ Kutu yazımını seyreltmek: `./track.sh --print-box 10` (her 10. kare).
 işlenemediği yazdırılır. İlk kare hariç tutulur: CUDA çekirdek seçimi ~1.5-2.5
 saniye sürer ve bu ölçüm değildir — kurulumda sahte bir kutuyla önden ödenir, o
 yüzden senin ilk kutun ilk kareden itibaren normal hızda takip edilir.
+
+### Terminal 3 — port ve adres
+
+`./view.sh` `udp://0.0.0.0:1235` dinler. **Dinleyen taraf olduğu için hiçbir IP'ye
+ihtiyacı yoktur**; sadece portu bilmesi yeter, o da tracker'ın gönderdiği portla
+aynı olmak zorunda.
+
+```bash
+./view.sh          # 1235 (varsayılan)
+./view.sh 1236     # başka port — tracker da 1236'ya göndermeli
+```
+
+Portu iki tarafta birden değiştirmek gerekir, tek tarafta değiştirmek sessizce
+siyah ekran demektir:
+
+```bash
+VIEW=127.0.0.1:1236 ./track.sh   # TERMİNAL 2: nereye gönderiyor
+./view.sh 1236                   # TERMİNAL 3: nereyi dinliyor
+```
+
+Repo'nun kurulu olmadığı bir makinede izlemek için `view.sh` şart değil:
+`vlc udp://@:1235` ya da `ffplay udp://0.0.0.0:1235` aynı işi görür.
+
+### Tüm adresler tek tabloda
+
+| ayar | nerede verilir | varsayılan |
+|---|---|---|
+| yayıncının **hedefi** | terminal 1: `./publish.sh video.mp4 <IP:PORT>` | `127.0.0.1:1234` |
+| tracker'ın **dinlediği** | terminal 2: `IN_PORT=1234 BIND=0.0.0.0 ./track.sh` | `0.0.0.0:1234` |
+| tracker'ın **hedefi** | terminal 2: `VIEW=<IP:PORT> ./track.sh` | `127.0.0.1:1235` |
+| izleyicinin **dinlediği** | terminal 3: `./view.sh <PORT>` | `1235` |
+
+Varsayılanların hepsi `env.sh` içinde. Tek seferlik değiştirmek için değişkeni
+komutun önüne yaz, kalıcı istiyorsan `env.sh`'i düzenle. Kutulu görüntüyü hiç
+yollamamak için `VIEW=off ./track.sh` — o zaman terminal 3'e gerek kalmaz.
+
+Süreçleri farklı makinelere dağıtmak: [Birden fazla makine](#4-birden-fazla-makine).
 
 ## 4. Birden fazla makine
 
