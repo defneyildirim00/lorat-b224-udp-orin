@@ -9,7 +9,6 @@ Launch via track_live.sh (picks the right venv). Direct use:
     python track_live.py --tracker ostrack_trt --url udp://127.0.0.1:1234
 
 Controls:  drag a box any time to (re-)start tracking that object ·
-           --write: type "x y w h" in the terminal instead ·
            r = drop the target · f = freeze/unfreeze the picture while aiming ·
            q/ESC = quit
 
@@ -155,49 +154,6 @@ def wait_for_frame(state, timeout=15.0):
             break
         time.sleep(0.01)
     raise SystemExit("no frames received from stream — is the publisher running?")
-
-
-def typed_box_thread(tstate):
-    """Read init boxes typed as `x y w h` on stdin (--write), in parallel with
-    everything else.
-
-    A thread on purpose: the window, the socket and the model build all keep
-    running while you type. Blocking any of them would freeze the picture and —
-    worse — stall the grabber, which is the one thing that must never pause.
-
-    A typed box differs from a drawn one in a way that matters. A drawn box is
-    tied to the frame you were looking at, so it goes stale in seconds. A typed
-    box comes from an annotation, not from a picture, so it carries no frame with
-    it and no staleness rule: it is applied against the freshest frame at the
-    moment it CAN be applied. That is what makes typing it before the publisher
-    even starts work — it simply waits for frame 1."""
-    print("[box] --write: type the init box as  x y w h  (or x,y,w,h), then Enter."
-          "  Drawing with the mouse keeps working.")
-    while tstate["run"]:
-        try:
-            line = sys.stdin.readline()
-        except Exception:
-            return
-        if not line:                       # stdin closed (nohup, </dev/null, ...)
-            return
-        line = line.strip().strip("[]()").replace(",", " ")
-        if not line:
-            continue
-        try:
-            vals = [float(v) for v in line.split()]
-        except ValueError:
-            print("[box] not a box: %r — 4 numbers please:  x y w h" % line)
-            continue
-        if len(vals) != 4:
-            print("[box] need exactly 4 numbers (x y w h), got %d" % len(vals))
-            continue
-        if vals[2] < 5 or vals[3] < 5:
-            print("[box] rejected %gx%g — needs 5x5 px at least" % (vals[2], vals[3]))
-            continue
-        with tstate["lock"]:
-            tstate["typed"] = tuple(vals)
-        print("[box] queued (xywh) = %s — goes in as soon as the tracker and a "
-              "frame are both ready" % [int(v) for v in vals])
 
 
 # ---------------------------------------------------------------- startup UI --
@@ -775,30 +731,6 @@ def display_loop(args, state, tstate, win, writer):
                     tstate["init"] = (src, b)
                 note("tracking %dx%d box" % (int(b[2]), int(b[3])))
 
-        # A TYPED box (--write). No staleness check here, unlike the drawn box
-        # above: it was never tied to a displayed frame, so it goes in against
-        # the freshest one the moment the tracker exists.
-        typed = None
-        if frame is not None and trk is not None:
-            with tstate["lock"]:
-                typed, tstate["typed"] = tstate["typed"], None
-        if typed is not None:
-            fh, fw = frame.shape[:2]
-            if (typed[0] + typed[2] <= 0 or typed[1] + typed[3] <= 0
-                    or typed[0] >= fw or typed[1] >= fh):
-                note("typed box falls outside the %dx%d picture" % (fw, fh))
-                print("[box] REJECTED %s — outside the %dx%d picture"
-                      % ([int(v) for v in typed], fw, fh))
-            else:
-                with state["lock"]:
-                    src = state["frame"].copy()
-                with tstate["lock"]:
-                    tstate["init"] = (src, typed)
-                roi["n_sent"] += 1
-                note("typed box %dx%d" % (int(typed[2]), int(typed[3])))
-                print("[sel] box #%d sent to tracker, TYPED (xywh) = %s"
-                      % (roi["n_sent"], [int(v) for v in typed]))
-
         # Nothing new to draw: idle on waitKey so the window stays responsive.
         # The key still falls through to the single handler at the bottom —
         # handling keys only in the render path silently swallowed an 'r'/'f'
@@ -848,9 +780,7 @@ def display_loop(args, state, tstate, win, writer):
                          f"(stream is live)", 30)
             _label(disp, "box saved - but pick it again once loading ends"
                    if roi["pending"] is not None else
-                   ("you can pick your box already (drag, click 2 corners, or "
-                    "type x y w h in the terminal)" if args.write else
-                    "you can pick your box already (drag, or click 2 corners)"),
+                   "you can pick your box already (drag, or click 2 corners)",
                    62, 0.6, _GREEN)
         else:
             head = f"{args.tracker}   stream {fps_arrive or 0:4.1f} FPS"
@@ -876,9 +806,7 @@ def display_loop(args, state, tstate, win, writer):
             elif roi["drag"]:
                 _label(disp, "SELECTING - picture held", 62, 0.8, (255, 200, 0))
             elif not active:
-                _label(disp, "no target - type x y w h in the terminal, drag a "
-                             "box, or click its two corners" if args.write else
-                             "no target - drag a box, or click its two corners",
+                _label(disp, "no target - drag a box, or click its two corners",
                        62, 0.7, _YELLOW)
         if roi["n_sent"] or n_init:
             # If these two disagree, the box is being lost between the window and
@@ -929,29 +857,17 @@ def display_loop(args, state, tstate, win, writer):
 
 
 def headless_loop(args, state, tstate):
-    """No window: wait for the tracker, init from --bbox (or from a box typed
-    under --write), let tracker_thread run."""
+    """No window: wait for the tracker, init from --bbox, let tracker_thread run."""
     while tstate["trk"] is None and tstate["err"] is None:
         time.sleep(0.05)
     if tstate["err"] is not None:
         raise tstate["err"]
     frame = wait_for_frame(state)
-    if args.bbox:
-        bbox = tuple(float(v) for v in args.bbox.split(","))
-        assert len(bbox) == 4, "--bbox needs x,y,w,h"
-        with tstate["lock"]:
-            tstate["init"] = (frame, bbox)
+    bbox = tuple(float(v) for v in args.bbox.split(","))
+    assert len(bbox) == 4, "--bbox needs x,y,w,h"
+    with tstate["lock"]:
+        tstate["init"] = (frame, bbox)
     while state["alive"] and tstate["err"] is None:
-        # a typed box (--write) may arrive at any time, first one or a re-init
-        with tstate["lock"]:
-            typed, tstate["typed"] = tstate["typed"], None
-        if typed is not None:
-            with state["lock"]:
-                src = state["frame"]
-            if src is not None:
-                with tstate["lock"]:
-                    tstate["init"] = (src.copy(), typed)
-                print("[sel] TYPED box (xywh) = %s" % [int(v) for v in typed])
         with tstate["lock"]:
             n, tfps = tstate["n"], tstate["fps"]
         if args.max_frames and n >= args.max_frames:
@@ -990,21 +906,15 @@ def main():
                          "corner: the box you draw is mapped back to stream "
                          "coordinates, a hand-resized window is not.")
     ap.add_argument("--bbox", default=None, help="preset init box x,y,w,h (skip the mouse)")
-    ap.add_argument("--write", action="store_true",
-                    help="also accept the init box TYPED in the terminal as "
-                         "\"x y w h\" (or x,y,w,h) — for annotated coordinates. "
-                         "The mouse keeps working; you can type before the "
-                         "publisher starts, and type again later to re-init.")
-    ap.add_argument("--headless", action="store_true",
-                    help="no window (needs --bbox, or --write to type the box)")
+    ap.add_argument("--headless", action="store_true", help="no window (needs --bbox)")
     ap.add_argument("--max-frames", type=int, default=0, help="stop after N tracked frames")
     ap.add_argument("--wait", type=float, default=60.0,
                     help="seconds to wait for the publisher before giving up")
     args = ap.parse_args()
 
     gui = not args.headless
-    if not gui and not (args.bbox or args.write):
-        raise SystemExit("--headless requires --bbox x,y,w,h (or --write to type it)")
+    if not gui and not args.bbox:
+        raise SystemExit("--headless requires --bbox x,y,w,h")
     if args.out:
         print("[sub] watch it with:  ffplay -fflags nobuffer -flags low_delay "
               "-i udp://%s   (or VLC: udp://@%s)"
@@ -1023,12 +933,7 @@ def main():
     tstate = {"trk": None, "cfg": None, "box": None, "score": None, "fps": None,
               "n": 0, "active": False, "err": None, "run": True,
               "build_s": None, "steps": [], "lags": [], "n_init": 0,
-              "typed": None, "lock": threading.Lock()}
-
-    # Started BEFORE the stream opens on purpose: --write's whole point is being
-    # able to type the box while the publisher is not even running yet.
-    if args.write:
-        threading.Thread(target=typed_box_thread, args=(tstate,), daemon=True).start()
+              "lock": threading.Lock()}
 
     cap, first = _open_stream_ui(args, state, gui, win)
 

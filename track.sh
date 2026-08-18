@@ -5,7 +5,6 @@
 # UDP'ye basar (izleyici için) ve her kutuyu terminale yazar.
 #
 #   ./track.sh                          # pencere açılır, kutuyu fareyle çizersin
-#   ./track.sh --write                  # kutuyu terminale "x y w h" diye de yazabilirsin
 #   ./track.sh --engine                 # TensorRT FP16 motoru (önce ./setup_engine.sh)
 #   VIEW=10.0.0.9:1235 ./track.sh       # kutulu görüntüyü BAŞKA makineye yolla
 #   ./track.sh --headless --bbox x,y,w,h   # ekransız (uçaktaki durum)

@@ -152,49 +152,6 @@ Model ~10-15 saniye yüklenir. **Yükleme bitene kadar bekle** — üstteki
 Fare tuşuna basılıyken resim durur, yani her zaman **duran bir görüntüye**
 nişan alırsın ve kutu tam olarak o kareyle eşleşir.
 
-#### Kutuyu yazarak vermek — `--write`
-
-Elinde hazır koordinat varsa (etiketli veri, önceki bir koşunun çıktısı) kutuyu
-fareyle çizmek yerine yazabilirsin:
-
-```bash
-./track.sh --write
-```
-
-Terminale `x y w h` yaz, Enter. Virgül de kabul edilir (`588,220,54,131`):
-
-```
-[box] --write: type the init box as  x y w h  (or x,y,w,h), then Enter.
-588 220 54 131
-[box] queued (xywh) = [588, 220, 54, 131] — goes in as soon as the tracker and a frame are both ready
-[sel] box #1 sent to tracker, TYPED (xywh) = [588, 220, 54, 131]
-[sub] INIT #1 done, box (xywh) = [588, 220, 54, 131] — tracking from here
-```
-
-Fare kapanmaz, ikisi birlikte çalışır. Sonradan yeni bir satır yazarsan tracker o
-kutuyla yeniden başlar; bozuk satır (eksik sayı, harf, 5 pikselden ince kutu)
-reddedilir ve sebebi yazılır.
-
-**Yazarken modelin yüklenmesini beklemene gerek yok**, hatta yayıncı hiç
-çalışmıyorken bile yazabilirsin — kutu kuyruğa girer. Sebebi şu ayrım:
-
-* **çizilen** kutu, üstünde çizildiği **kareye bağlıdır** ve 2 saniyede bayatlar
-  (bu yüzden çizmeden önce yüklemenin bitmesini beklersin),
-* **yazılan** kutu bir kareye bağlı değildir, sadece bir koordinat listesidir; o
-  yüzden bayatlama kuralı ona işlemez ve tracker hazır olur olmaz **o anki en taze
-  kareye** uygulanır.
-
-Bedeli de tam olarak bu: yazdığın koordinat hangi kareye ait olduğunu bilmez.
-Etiketli veriden aldığın "ilk kare" kutusunu yazarsan ama yayın çoktan ilerlemişse
-kutu boş bir yere denk gelir ve tracker anında kaybeder — `--bbox` için geçerli
-uyarının aynısı. Videonun başına yakın bir kareye denk getirmek istiyorsan:
-tracker `no target` yazana kadar bekle, yayıncıyı `Ctrl-C` ile durdurup yeniden
-başlat (akış baştan sarar), sonra kutuyu hemen yaz. Kareye tam oturan bir
-başlangıç canlı hattın işi değildir; o çevrimdışı ölçüm tarafına aittir.
-
-Ekransız da çalışır: `./track.sh --headless --write` — bu durumda `--bbox`
-gerekmez, kutuyu çalışırken yazarsın.
-
 ### Terminale yazılanlar
 
 ```
