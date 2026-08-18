@@ -71,6 +71,8 @@ Tekrar çalıştırmak zararsız — var olanı atlar. Sadece doğrulamak için:
 
 ## 3. Çalıştırma — üç terminal
 
+**Hepsi tek makinede** — hiçbir adres yazmazsın, varsayılanlar `127.0.0.1`:
+
 ```bash
 # TERMİNAL 1 — yayıncı (kamera rolü)
 ./publish.sh
@@ -81,6 +83,25 @@ Tekrar çalıştırmak zararsız — var olanı atlar. Sadece doğrulamak için:
 # TERMİNAL 3 — izleyici
 ./view.sh
 ```
+
+**İzleyici başka makinede** (Orin uçakta, operatör laptopta `192.168.1.50`):
+
+```bash
+# TERMİNAL 1 — ORIN'de. Tracker aynı makinede, adres gerekmez.
+./publish.sh bike1.mp4
+
+# TERMİNAL 2 — ORIN'de. İZLEYİCİNİN IP:PORT'U BURAYA YAZILIR.
+VIEW=192.168.1.50:1235 ./track.sh
+
+# TERMİNAL 3 — LAPTOPTA. Sadece kendi portu; IP yazılmaz.
+./view.sh 1235
+# repo laptopta kurulu değilse, aynı işi VLC de yapar:
+vlc udp://@:1235
+```
+
+> İzleyicinin adresi terminal 3'te değil, **terminal 2'de** verilir — çünkü ona
+> gönderen taraf tracker'dır. Gönderen karşıdakinin adresini yazar, alan sadece
+> kendi portunu ([Portlar: iki atlama, dört ayar](#portlar-iki-atlama-dört-ayar)).
 
 Sıra önemli: önce yayıncı, sonra tracker, en son izleyici. Tracker yayın
 gelmeden açılırsa bekler, ölmez.
@@ -155,7 +176,7 @@ işlenemediği yazdırılır. İlk kare hariç tutulur: CUDA çekirdek seçimi ~
 saniye sürer ve bu ölçüm değildir — kurulumda sahte bir kutuyla önden ödenir, o
 yüzden senin ilk kutun ilk kareden itibaren normal hızda takip edilir.
 
-### Terminal 3 — port ve adres
+### Terminal 3 — izleyici (view.sh ya da VLC)
 
 `./view.sh` `udp://0.0.0.0:1235` dinler. **Dinleyen taraf olduğu için hiçbir IP'ye
 ihtiyacı yoktur**; sadece portu bilmesi yeter, o da tracker'ın gönderdiği portla
