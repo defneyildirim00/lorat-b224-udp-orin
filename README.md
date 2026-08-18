@@ -177,34 +177,62 @@ VIEW=127.0.0.1:1236 ./track.sh   # TERMİNAL 2: nereye gönderiyor
 Repo'nun kurulu olmadığı bir makinede izlemek için `view.sh` şart değil:
 `vlc udp://@:1235` ya da `ffplay udp://0.0.0.0:1235` aynı işi görür.
 
-### Tüm adresler tek tabloda
+### Portlar: iki atlama, dört ayar
 
-| ayar | nerede verilir | varsayılan |
+Hat iki UDP atlamasından oluşur. Her atlamada **gönderen taraf karşıdakinin
+adresini yazar; alan taraf sadece kendi portunu yazar.**
+
+```
+  TERMİNAL 1              TERMİNAL 2               TERMİNAL 3
+  publish.sh              track.sh                 view.sh
+  (gönderir)         (alır  ->  gönderir)          (alır)
+
+      │  ATLAMA 1             │   ATLAMA 2             │
+      └──── video ───────────►│──── kutulu görüntü ───►│
+         kime: :1234       dinler: 1234            dinler: 1235
+                           kime:   :1235
+```
+
+Terminal 2 ortada olduğu için **iki** ayar taşır: dinlediği port ve yolladığı
+adres. Terminal 1 ile terminal 3'ün birer tane.
+
+| atlama | gönderen — karşının adresini yazar | alan — kendi portunu yazar |
 |---|---|---|
-| yayıncının **hedefi** | terminal 1: `./publish.sh video.mp4 <IP:PORT>` | `127.0.0.1:1234` |
-| tracker'ın **dinlediği** | terminal 2: `IN_PORT=1234 BIND=0.0.0.0 ./track.sh` | `0.0.0.0:1234` |
-| tracker'ın **hedefi** | terminal 2: `VIEW=<IP:PORT> ./track.sh` | `127.0.0.1:1235` |
-| izleyicinin **dinlediği** | terminal 3: `./view.sh <PORT>` | `1235` |
+| 1 — video | terminal 1: `./publish.sh video.mp4 <TRACKER-IP>:1234` | terminal 2: `IN_PORT=1234 ./track.sh` |
+| 2 — kutulu görüntü | terminal 2: `VIEW=<İZLEYİCİ-IP>:1235 ./track.sh` | terminal 3: `./view.sh 1235` |
 
-Varsayılanların hepsi `env.sh` içinde. Tek seferlik değiştirmek için değişkeni
-komutun önüne yaz, kalıcı istiyorsan `env.sh`'i düzenle. Kutulu görüntüyü hiç
-yollamamak için `VIEW=off ./track.sh` — o zaman terminal 3'e gerek kalmaz.
+Varsayılanlar `env.sh` içinde: `IN_PORT=1234`, `BIND=0.0.0.0`,
+`VIEW=127.0.0.1:1235`. Tek seferlik değiştirmek için değişkeni komutun önüne yaz,
+kalıcı istiyorsan `env.sh`'i düzenle.
 
-Süreçleri farklı makinelere dağıtmak: [Birden fazla makine](#4-birden-fazla-makine).
+**Hepsi tek makinedeyse hiçbirini yazmazsın** — varsayılanlar zaten `127.0.0.1`
+gösteriyor, `./publish.sh` + `./track.sh` + `./view.sh` yeter. Adresler ancak
+süreçler farklı makinelere dağılınca devreye girer
+([Birden fazla makine](#4-birden-fazla-makine)).
+
+Sık karışanlar:
+
+* **"Terminal 1 zaten aynı makinede, neden orada port var?"** Çünkü gönderen o.
+  UDP'de gönderen her zaman hedefin adresini yazar, aynı makinede bile — sadece o
+  adres `127.0.0.1:1234` olduğu için varsayılan hallediyor ve sen yazmıyorsun.
+* **"İzleyicinin portu terminal 2'de mi?"** Evet, `VIEW`'ün içinde. Tracker o
+  porta yollar, izleyici o portu dinler; ikisi eşleşmezse izleyicide **siyah
+  ekran** olur ve hiçbir hata mesajı çıkmaz.
+* **"Terminal 2'de kaç port var?"** İki: `IN_PORT` (dinlediği) ve `VIEW`'ün portu
+  (yolladığı). Aynı makinedeyken bunlar farklı olmak zorunda.
+* **`VIEW=off ./track.sh`** — kutulu görüntüyü hiç yollamaz; terminal 3'e gerek
+  kalmaz.
 
 ## 4. Birden fazla makine
 
-Üç süreç, üç adres, her biri **farklı tarafta** ayarlanır:
+Hangi ayarın nerede verildiği yukarıda:
+[Portlar: iki atlama, dört ayar](#portlar-iki-atlama-dört-ayar). Burada sadece
+makineler ayrıldığında değişenler var.
 
-| ne | nerede | kural |
-|---|---|---|
-| yayıncının hedefi | `./publish.sh video.mp4 <TRACKER-IP>:1234` | tracker'ın makinesi |
-| tracker'ın dinlediği | `BIND=0.0.0.0` (varsayılan) | `127.0.0.1` **yazma** |
-| tracker'ın hedefi | `VIEW=<İZLEYİCİ-IP>:1235 ./track.sh` | izleyecek makine |
-| izleyicinin dinlediği | `./view.sh 1235` | zaten `0.0.0.0`, değişmez |
-
-Kural: **gönderen tarafın karşıdakinin adresine ihtiyacı var, alan tarafın hiçbir
-adrese ihtiyacı yok.**
+Kural değişmiyor — **gönderen tarafın karşıdakinin adresine ihtiyacı var, alan
+tarafın hiçbir adrese ihtiyacı yok.** Yani tracker başka makinedeyse onun IP'sini
+terminal 1'e, izleyici başka makinedeyse onun IP'sini terminal 2'ye yazarsın;
+terminal 3'e hiçbir zaman IP yazılmaz, sadece port.
 
 `BIND=127.0.0.1` sadece loopback'i dinler; başka makineden gelen her paket sessizce
 atılır — hata da vermez. Bu yüzden varsayılan `0.0.0.0`.
